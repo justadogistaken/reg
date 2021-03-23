@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -101,8 +102,31 @@ func (r *Registry) ManifestV1(ctx context.Context, repository, ref string) (sche
 	return m, nil
 }
 
+func (r *Registry) initManifestsPut(repository, ref string) (string, error) {
+	url := r.url("/v2/%s/manifests/%s", repository, ref)
+	r.Logf("for getting token, registry.manifest.put url=%s repository=%s reference=%s", url, repository, ref)
+
+	req, err := http.NewRequest("PUT", url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := r.Client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	token := resp.Header.Get("Request-Token")
+	return token, nil
+}
+
 // PutManifest calls a PUT for the specific manifest for an image.
 func (r *Registry) PutManifest(ctx context.Context, repository, ref string, manifest distribution.Manifest) error {
+	token, err := r.initManifestsPut(repository, ref)
+	if err != nil {
+		return err
+	}
+
 	url := r.url("/v2/%s/manifests/%s", repository, ref)
 	r.Logf("registry.manifest.put url=%s repository=%s reference=%s", url, repository, ref)
 
@@ -117,6 +141,12 @@ func (r *Registry) PutManifest(ctx context.Context, repository, ref string, mani
 	}
 
 	req.Header.Set("Content-Type", schema2.MediaTypeManifest)
+	if token != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	} else {
+		r.Logf("token is empty, you may ignore this")
+	}
+
 	resp, err := r.Client.Do(req.WithContext(ctx))
 	if resp != nil {
 		defer resp.Body.Close()
