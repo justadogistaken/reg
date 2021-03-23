@@ -21,9 +21,9 @@ var (
 )
 
 // Manifest returns the manifest for a specific repository:tag.
-func (r *Registry) Manifest(ctx context.Context, repository, ref string) (distribution.Manifest, error) {
-	uri := r.url("/v2/%s/manifests/%s", repository, ref)
-	r.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
+func (registry *Registry) Manifest(ctx context.Context, repository, ref string) (distribution.Manifest, error) {
+	uri := registry.url("/v2/%s/manifests/%s", repository, ref)
+	registry.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
 
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
@@ -32,7 +32,7 @@ func (r *Registry) Manifest(ctx context.Context, repository, ref string) (distri
 
 	req.Header.Add("Accept", schema2.MediaTypeManifest)
 
-	resp, err := r.Client.Do(req.WithContext(ctx))
+	resp, err := registry.Client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (r *Registry) Manifest(ctx context.Context, repository, ref string) (distri
 	if err != nil {
 		return nil, err
 	}
-	r.Logf("registry.manifests resp.Status=%s, body=%s", resp.Status, body)
+	registry.Logf("registry.manifests resp.Status=%s, body=%s", resp.Status, body)
 
 	m, _, err := distribution.UnmarshalManifest(resp.Header.Get("Content-Type"), body)
 	if err != nil {
@@ -53,13 +53,13 @@ func (r *Registry) Manifest(ctx context.Context, repository, ref string) (distri
 }
 
 // ManifestList gets the registry v2 manifest list.
-func (r *Registry) ManifestList(ctx context.Context, repository, ref string) (manifestlist.ManifestList, error) {
-	uri := r.url("/v2/%s/manifests/%s", repository, ref)
-	r.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
+func (registry *Registry) ManifestList(ctx context.Context, repository, ref string) (manifestlist.ManifestList, error) {
+	uri := registry.url("/v2/%s/manifests/%s", repository, ref)
+	registry.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
 
 	var m manifestlist.ManifestList
-	if _, err := r.getJSON(ctx, uri, &m); err != nil {
-		r.Logf("registry.manifests response=%v", m)
+	if _, err := registry.getJSON(ctx, uri, &m); err != nil {
+		registry.Logf("registry.manifests response=%v", m)
 		return m, err
 	}
 
@@ -67,13 +67,13 @@ func (r *Registry) ManifestList(ctx context.Context, repository, ref string) (ma
 }
 
 // ManifestV2 gets the registry v2 manifest.
-func (r *Registry) ManifestV2(ctx context.Context, repository, ref string) (schema2.Manifest, error) {
-	uri := r.url("/v2/%s/manifests/%s", repository, ref)
-	r.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
+func (registry *Registry) ManifestV2(ctx context.Context, repository, ref string) (schema2.Manifest, error) {
+	uri := registry.url("/v2/%s/manifests/%s", repository, ref)
+	registry.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
 
 	var m schema2.Manifest
-	if _, err := r.getJSON(ctx, uri, &m); err != nil {
-		r.Logf("registry.manifests response=%v", m)
+	if _, err := registry.getJSON(ctx, uri, &m); err != nil {
+		registry.Logf("registry.manifests response=%v", m)
 		return m, err
 	}
 
@@ -85,13 +85,13 @@ func (r *Registry) ManifestV2(ctx context.Context, repository, ref string) (sche
 }
 
 // ManifestV1 gets the registry v1 manifest.
-func (r *Registry) ManifestV1(ctx context.Context, repository, ref string) (schema1.SignedManifest, error) {
-	uri := r.url("/v2/%s/manifests/%s", repository, ref)
-	r.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
+func (registry *Registry) ManifestV1(ctx context.Context, repository, ref string) (schema1.SignedManifest, error) {
+	uri := registry.url("/v2/%s/manifests/%s", repository, ref)
+	registry.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
 
 	var m schema1.SignedManifest
-	if _, err := r.getJSON(ctx, uri, &m); err != nil {
-		r.Logf("registry.manifests response=%v", m)
+	if _, err := registry.getJSON(ctx, uri, &m); err != nil {
+		registry.Logf("registry.manifests response=%v", m)
 		return m, err
 	}
 
@@ -102,16 +102,16 @@ func (r *Registry) ManifestV1(ctx context.Context, repository, ref string) (sche
 	return m, nil
 }
 
-func (r *Registry) initManifestsPut(repository, ref string) (string, error) {
-	url := r.url("/v2/%s/manifests/%s", repository, ref)
-	r.Logf("for getting token, registry.manifest.put url=%s repository=%s reference=%s", url, repository, ref)
+func (registry *Registry) initManifestsPut(repository, ref string) (string, error) {
+	url := registry.url("/v2/%s/manifests/%s", repository, ref)
+	registry.Logf("for getting token, registry.manifest.put url=%s repository=%s reference=%s", url, repository, ref)
 
 	req, err := http.NewRequest("PUT", url, nil)
 	if err != nil {
 		return "", err
 	}
 
-	resp, err := r.Client.Do(req)
+	resp, err := registry.Client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -121,14 +121,14 @@ func (r *Registry) initManifestsPut(repository, ref string) (string, error) {
 }
 
 // PutManifest calls a PUT for the specific manifest for an image.
-func (r *Registry) PutManifest(ctx context.Context, repository, ref string, manifest distribution.Manifest) error {
-	token, err := r.initManifestsPut(repository, ref)
+func (registry *Registry) PutManifest(ctx context.Context, repository, ref string, manifest distribution.Manifest) error {
+	token, err := registry.initManifestsPut(repository, ref)
 	if err != nil {
 		return err
 	}
 
-	url := r.url("/v2/%s/manifests/%s", repository, ref)
-	r.Logf("registry.manifest.put url=%s repository=%s reference=%s", url, repository, ref)
+	url := registry.url("/v2/%s/manifests/%s", repository, ref)
+	registry.Logf("registry.manifest.put url=%s repository=%s reference=%s", url, repository, ref)
 
 	b, err := json.Marshal(manifest)
 	if err != nil {
@@ -144,10 +144,10 @@ func (r *Registry) PutManifest(ctx context.Context, repository, ref string, mani
 	if token != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	} else {
-		r.Logf("token is empty, you may ignore this")
+		registry.Logf("token is empty, you may ignore this")
 	}
 
-	resp, err := r.Client.Do(req.WithContext(ctx))
+	resp, err := registry.Client.Do(req.WithContext(ctx))
 	if resp != nil {
 		defer resp.Body.Close()
 	}

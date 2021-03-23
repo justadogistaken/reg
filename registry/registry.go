@@ -137,13 +137,13 @@ func newFromTransport(ctx context.Context, auth types.AuthConfig, transport http
 }
 
 // url returns a registry URL with the passed arguements concatenated.
-func (r *Registry) url(pathTemplate string, args ...interface{}) string {
+func (registry *Registry) url(pathTemplate string, args ...interface{}) string {
 	pathSuffix := fmt.Sprintf(pathTemplate, args...)
-	url := fmt.Sprintf("%s%s", r.URL, pathSuffix)
+	url := fmt.Sprintf("%s%s", registry.URL, pathSuffix)
 	return url
 }
 
-func (r *Registry) getJSON(ctx context.Context, url string, response interface{}) (http.Header, error) {
+func (registry *Registry) getJSON(ctx context.Context, url string, response interface{}) (http.Header, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -156,12 +156,12 @@ func (r *Registry) getJSON(ctx context.Context, url string, response interface{}
 		req.Header.Add("Accept", manifestlist.MediaTypeManifestList)
 	}
 
-	resp, err := r.Client.Do(req.WithContext(ctx))
+	resp, err := registry.Client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	r.Logf("registry.registry resp.Status=%s", resp.Status)
+	registry.Logf("registry.registry resp.Status=%s", resp.Status)
 
 	if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
 		return nil, err
