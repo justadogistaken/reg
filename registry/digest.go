@@ -10,14 +10,14 @@ import (
 )
 
 // Digest returns the digest for an image.
-func (r *Registry) Digest(ctx context.Context, image Image) (digest.Digest, error) {
+func (registry *Registry) Digest(ctx context.Context, image Image) (digest.Digest, error) {
 	if len(image.Digest) > 1 {
 		// return early if we already have an image digest.
 		return image.Digest, nil
 	}
 
-	url := r.url("/v2/%s/manifests/%s", image.Path, image.Tag)
-	r.Logf("registry.manifests.get url=%s repository=%s ref=%s",
+	url := registry.url("/v2/%s/manifests/%s", image.Path, image.Tag)
+	registry.Logf("registry.manifests.get url=%s repository=%s ref=%s",
 		url, image.Path, image.Tag)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -26,7 +26,7 @@ func (r *Registry) Digest(ctx context.Context, image Image) (digest.Digest, erro
 	}
 
 	req.Header.Add("Accept", schema2.MediaTypeManifest)
-	resp, err := r.Client.Do(req.WithContext(ctx))
+	resp, err := registry.Client.Do(req.WithContext(ctx))
 	if err != nil {
 		return "", err
 	}

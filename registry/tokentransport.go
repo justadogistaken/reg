@@ -141,8 +141,8 @@ func isTokenDemand(resp *http.Response) (*authService, error) {
 
 // Token returns the required token for the specific resource url. If the registry requires basic authentication, this
 // function returns ErrBasicAuth.
-func (r *Registry) Token(ctx context.Context, url string) (string, error) {
-	r.Logf("registry.token url=%s", url)
+func (registry *Registry) Token(ctx context.Context, url string) (string, error) {
+	registry.Logf("registry.token url=%s", url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -150,9 +150,9 @@ func (r *Registry) Token(ctx context.Context, url string) (string, error) {
 	}
 
 	client := http.DefaultClient
-	if r.Opt.Insecure {
+	if registry.Opt.Insecure {
 		client = &http.Client{
-			Timeout: r.Opt.Timeout,
+			Timeout: registry.Opt.Timeout,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
 					InsecureSkipVerify: true,
@@ -180,11 +180,11 @@ func (r *Registry) Token(ctx context.Context, url string) (string, error) {
 	}
 
 	if a == nil {
-		r.Logf("registry.token authService=nil")
+		registry.Logf("registry.token authService=nil")
 		return "", nil
 	}
 
-	authReq, err := a.Request(r.Username, r.Password)
+	authReq, err := a.Request(registry.Username, registry.Password)
 	if err != nil {
 		return "", err
 	}
@@ -207,20 +207,20 @@ func (r *Registry) Token(ctx context.Context, url string) (string, error) {
 }
 
 // Headers returns the authorization headers for a specific uri.
-func (r *Registry) Headers(ctx context.Context, uri string) (map[string]string, error) {
+func (registry *Registry) Headers(ctx context.Context, uri string) (map[string]string, error) {
 	// Get the token.
-	token, err := r.Token(ctx, uri)
+	token, err := registry.Token(ctx, uri)
 	if err != nil {
 		if err == ErrBasicAuth {
 			// If we couldn't get a token because the server requires basic auth, just return basic auth headers.
 			return map[string]string{
-				"Authorization": fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(r.Username+":"+r.Password))),
+				"Authorization": fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(registry.Username+":"+registry.Password))),
 			}, nil
 		}
 	}
 
 	if len(token) < 1 {
-		r.Logf("got empty token for %s", uri)
+		registry.Logf("got empty token for %s", uri)
 		return map[string]string{}, nil
 	}
 
