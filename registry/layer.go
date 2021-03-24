@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"errors"
 	"github.com/docker/distribution"
 	"io"
 	"net/http"
@@ -91,8 +92,17 @@ func (registry *Registry) LayerMetadata(repository string, digest digest.Digest)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
+
 	if err != nil {
 		return distribution.Descriptor{}, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return distribution.Descriptor{}, errors.New("layer not found")
+		} else {
+			return distribution.Descriptor{}, errors.New("unexpected error when retrieving layer")
+		}
 	}
 
 	return distribution.Descriptor{
